@@ -1,0 +1,16 @@
+export const theme = {
+  bg: '#f4f1ea',
+  card: '#ffffff',
+  ink: '#1c1917',
+  muted: '#57534e',
+  line: '#e6e2d8',
+  accent: '#1e4d3a',
+  accentSoft: '#e7f2ec',
+  warnBg: '#fff7ed',
+  warnInk: '#9a3412',
+  badBg: '#fff1f2',
+  badInk: '#9f1239',
+  okBg: '#f0fdf4',
+  okInk: '#166534',
+  maxWidth: 720,
+};
