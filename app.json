@@ -1,0 +1,33 @@
+{
+  "expo": {
+    "name": "Маркетинг-игра",
+    "slug": "marketing-sim-game",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "scheme": "marketinggame",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "ru.marketinggame.app"
+    },
+    "android": {
+      "package": "ru.marketinggame.app",
+      "adaptiveIcon": {
+        "backgroundColor": "#1E4D3A",
+        "foregroundImage": "./assets/icon.png"
+      }
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "single",
+      "favicon": "./assets/favicon.png",
+      "lang": "ru"
+    },
+    "plugins": ["expo-router"],
+    "experiments": {
+      "typedRoutes": false
+    }
+  }
+}
