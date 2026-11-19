@@ -10,6 +10,7 @@ export const GOAL_IDS = [
   'campaign_replay',
   'topic_start',
   'topic_complete',
+  'achievement_unlock',
 ] as const;
 
 export type GoalId = (typeof GOAL_IDS)[number];
