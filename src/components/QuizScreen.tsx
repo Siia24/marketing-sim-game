@@ -108,8 +108,8 @@ export function QuizScreen({ campaignId, lessonId }: { campaignId: string; lesso
 const styles = StyleSheet.create({
   prompt: { fontSize: 20, lineHeight: 28, fontWeight: '700', color: theme.ink },
   feedback: { borderRadius: 14, padding: 16, gap: 10, borderWidth: 1 },
-  ok: { backgroundColor: theme.okBg, borderColor: '#bbf7d0' },
-  miss: { backgroundColor: theme.warnBg, borderColor: '#fed7aa' },
+  ok: { backgroundColor: theme.okBg, borderColor: theme.okLine },
+  miss: { backgroundColor: theme.warnBg, borderColor: theme.warnLine },
   kicker: { fontSize: 13, fontWeight: '700', color: theme.muted },
   answer: { fontSize: 16, lineHeight: 22, fontWeight: '600', color: theme.ink },
   feedbackText: { fontSize: 16, lineHeight: 24, color: theme.ink },
