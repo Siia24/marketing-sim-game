@@ -24,6 +24,8 @@ describe('сохранение', () => {
     assert.equal(parsed.history[0]?.attemptId, 'older');
     assert.deepEqual(parsed.topics, {});
     assert.equal(parsed.topicRun, null);
+    assert.deepEqual(parsed.achievements, []);
+    assert.equal(parsed.seenIntro, false);
   });
 
   it('читает звёзды и выбрасывает битую запись, не трогая попытку', () => {

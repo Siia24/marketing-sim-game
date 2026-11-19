@@ -86,4 +86,7 @@ export interface StoredProgress {
   history: AttemptSummary[];
   topics: Record<string, TopicScore>;
   topicRun: TopicRun | null;
+  /** Знаки, которые уже записаны. Новые считаются заново и дописываются сюда. */
+  achievements: string[];
+  seenIntro: boolean;
 }

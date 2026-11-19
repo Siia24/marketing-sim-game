@@ -37,8 +37,8 @@ export function FeedbackCard({
 
 const styles = StyleSheet.create({
   card: { borderRadius: 14, padding: 16, gap: 10, borderWidth: 1 },
-  ok: { backgroundColor: theme.okBg, borderColor: '#bbf7d0' },
-  back: { backgroundColor: theme.warnBg, borderColor: '#fed7aa' },
+  ok: { backgroundColor: theme.okBg, borderColor: theme.okLine },
+  back: { backgroundColor: theme.warnBg, borderColor: theme.warnLine },
   kicker: { fontSize: 13, fontWeight: '700', color: theme.muted },
   reply: { gap: 4 },
   speaker: { fontSize: 13, fontWeight: '700', color: theme.ink },

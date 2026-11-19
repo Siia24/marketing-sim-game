@@ -2,7 +2,8 @@ import { createContext, useContext, useEffect, useRef, useState, type ReactNode 
 import { goalsToFire, type GoalId } from '../analytics/goals';
 import { track } from '../analytics/track';
 import { findCampaign, listCampaigns } from '../content/registry';
-import { findTopic } from '../content/topics';
+import { findTopic, topicsFor } from '../content/topics';
+import { mergeAchievements, type AchievementId } from '../engine/achievements';
 import type { Campaign } from '../content/types';
 import type { Attempt, StoredProgress } from '../engine/attempt';
 import { reduceFacts, resultFromFacts, type GameFacts } from '../engine/facts';
@@ -46,6 +47,9 @@ interface ProgressApi {
   beginTopic: (topicId: string) => Promise<void>;
   answerTopic: (topicId: string, choiceId: string) => Promise<void>;
   advanceTopic: (topicId: string) => Promise<void>;
+  seeIntro: (campaignId: string) => Promise<void>;
+  unlockQueue: AchievementId[];
+  dismissUnlock: () => void;
 }
 
 interface FiredGoal {
@@ -59,6 +63,7 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
   const [saved, setSaved] = useState<Record<string, StoredProgress>>({});
   const [ready, setReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [unlockQueue, setUnlockQueue] = useState<AchievementId[]>([]);
   const busy = useRef(false);
 
   useEffect(() => {
@@ -66,11 +71,25 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
     Promise.all(
       listCampaigns().map(async (campaign) => {
         const loaded = compatibleAttempt(campaign, await loadProgress(campaign.id));
-        return [campaign.id, loaded] as const;
+        const stamped = mergeAchievements(
+          loaded,
+          topicsFor(campaign).map((topic) => topic.id),
+        );
+        if (stamped.fresh.length === 0) return { id: campaign.id, progress: loaded, fresh: [] };
+        try {
+          await saveProgress(campaign.id, stamped.progress);
+          return { id: campaign.id, progress: stamped.progress, fresh: stamped.fresh };
+        } catch {
+          return { id: campaign.id, progress: loaded, fresh: [] as AchievementId[] };
+        }
       }),
     )
       .then((entries) => {
-        if (!cancelled) setSaved(Object.fromEntries(entries));
+        if (cancelled) return;
+        setSaved(Object.fromEntries(entries.map((entry) => [entry.id, entry.progress])));
+        const fresh = entries.flatMap((entry) => entry.fresh);
+        setUnlockQueue(fresh);
+        for (const id of fresh) track('achievement_unlock', { id });
       })
       .catch(() => {
         if (!cancelled) setError('Не удалось прочитать сохранение.');
@@ -94,10 +113,22 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
   }
 
   async function persist(campaignId: string, progress: StoredProgress, goals: FiredGoal[]) {
+    const campaign = findCampaign(campaignId);
+    const stamped = campaign
+      ? mergeAchievements(
+          progress,
+          topicsFor(campaign).map((topic) => topic.id),
+        )
+      : { progress, fresh: [] as AchievementId[] };
+    const outgoing: FiredGoal[] = [
+      ...goals,
+      ...stamped.fresh.map((id) => ({ id: 'achievement_unlock' as const, params: { id } })),
+    ];
     try {
-      await saveProgress(campaignId, progress);
-      setSaved((prev) => ({ ...prev, [campaignId]: progress }));
-      for (const goal of goals) track(goal.id, goal.params);
+      await saveProgress(campaignId, stamped.progress);
+      setSaved((prev) => ({ ...prev, [campaignId]: stamped.progress }));
+      if (stamped.fresh.length > 0) setUnlockQueue((queue) => [...queue, ...stamped.fresh]);
+      for (const goal of outgoing) track(goal.id, goal.params);
     } catch {
       setError('Не удалось сохранить шаг.');
     }
@@ -249,6 +280,17 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
         }
         await persist(found.campaign.id, progress, goals);
       });
+    },
+    seeIntro(campaignId) {
+      return run(async () => {
+        const progress = live(campaignId);
+        if (progress.seenIntro) return;
+        await persist(campaignId, { ...progress, seenIntro: true }, []);
+      });
+    },
+    unlockQueue,
+    dismissUnlock() {
+      setUnlockQueue((queue) => queue.slice(1));
     },
   };
 

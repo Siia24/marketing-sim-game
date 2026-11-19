@@ -1,3 +1,4 @@
+import { isAchievementId } from '../engine/achievements';
 import type {
   Attempt,
   AttemptSummary,
@@ -11,7 +12,14 @@ import type {
 const STAGES: readonly TopicStage[] = ['cards', 'practice', 'feedback', 'result'];
 
 export function emptyProgress(): StoredProgress {
-  return { current: null, history: [], topics: {}, topicRun: null };
+  return {
+    current: null,
+    history: [],
+    topics: {},
+    topicRun: null,
+    achievements: [],
+    seenIntro: false,
+  };
 }
 
 export function parseProgress(raw: string): StoredProgress {
@@ -23,6 +31,8 @@ export function parseProgress(raw: string): StoredProgress {
       history: Array.isArray(value.history) ? value.history.filter(isSummary) : [],
       topics: parseTopics(value.topics),
       topicRun: parseRun(value.topicRun),
+      achievements: parseAchievements(value.achievements),
+      seenIntro: value.seenIntro === true,
     };
   } catch {
     return emptyProgress();
@@ -45,6 +55,16 @@ function isAttempt(value: unknown): value is Attempt {
 
 function isSummary(value: unknown): value is AttemptSummary {
   return isRecord(value) && typeof value.attemptId === 'string';
+}
+
+function parseAchievements(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  const found: string[] = [];
+  for (const item of value) {
+    if (typeof item === 'string' && isAchievementId(item) && !found.includes(item))
+      found.push(item);
+  }
+  return found;
 }
 
 function parseTopics(value: unknown): Record<string, TopicScore> {
