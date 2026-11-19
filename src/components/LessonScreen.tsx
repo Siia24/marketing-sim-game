@@ -4,7 +4,7 @@ import { getLesson, getStep, lessonIndex } from '../content/lookup';
 import type { Lesson, Speaker } from '../content/types';
 import { allocationFeedback } from '../engine/allocate';
 import type { Answer } from '../engine/attempt';
-import { quizPath, reportPath, resumePath } from '../state/routes';
+import { goHome, quizPath, reportPath, resumePath } from '../state/routes';
 import { useCampaign } from '../state/ProgressContext';
 import { AllocateEditor } from './AllocateEditor';
 import { AssembleEditor } from './AssembleEditor';
@@ -60,7 +60,7 @@ export function LessonScreen({ campaignId, lessonId }: { campaignId: string; les
 
   return (
     <Screen>
-      <Button label="К списку" variant="ghost" onPress={() => router.push('/')} />
+      <Button label="К списку" variant="ghost" onPress={() => goHome(router)} />
       {error ? <Text style={styles.error}>{error}</Text> : null}
       <Muted>
         Урок {lessonIndex(campaign, lesson.id) + 1} из {campaign.lessons.length} ·{' '}

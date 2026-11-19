@@ -1,5 +1,14 @@
 import type { Attempt } from '../engine/attempt';
 
+export function goHome(router: {
+  canGoBack: () => boolean;
+  back: () => void;
+  replace: (href: '/') => void;
+}): void {
+  if (router.canGoBack()) router.back();
+  else router.replace('/');
+}
+
 export function lessonPath(campaignId: string, lessonId: string): string {
   return `/campaign/${campaignId}/lesson/${lessonId}`;
 }
