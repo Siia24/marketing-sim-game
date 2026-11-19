@@ -64,7 +64,7 @@ describe('ход урока', () => {
     const played = play(campaign, PATH_A);
     const progress = replayFromLesson(
       campaign,
-      { current: played.attempt, history: [] },
+      { ...emptyProgress(), current: played.attempt },
       'content',
       'second',
       at,
@@ -86,7 +86,7 @@ describe('ход урока', () => {
 
   it('кнопка «пройти заново» начинает пустую попытку и оставляет итог в истории', () => {
     const played = play(campaign, PATH_A);
-    const progress = replay(campaign, { current: played.attempt, history: [] }, 'fresh', at);
+    const progress = replay(campaign, { ...emptyProgress(), current: played.attempt }, 'fresh', at);
     assert.equal(progress.current?.answers.length, 0);
     assert.equal(progress.current?.cursor.phase, 'situation');
     assert.equal(progress.history[0]?.netContribution, 2000);

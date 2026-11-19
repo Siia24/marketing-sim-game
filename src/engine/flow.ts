@@ -39,7 +39,7 @@ export function compatibleAttempt(campaign: Campaign, progress: StoredProgress):
     majorVersion(current.contentVersion) === majorVersion(campaign.contentVersion);
   const sameSimulation = current.simulationVersion === campaign.simulationVersion;
   if (sameContent && sameSimulation) return progress;
-  return { current: null, history: progress.history };
+  return { ...progress, current: null };
 }
 
 export function continueSituation(campaign: Campaign, attempt: Attempt, at: string): Attempt {
@@ -211,6 +211,7 @@ export function replay(
   at: string,
 ): StoredProgress {
   return {
+    ...progress,
     history: archiveIfCompleted(campaign, progress, at),
     current: createAttempt(campaign, attemptId, at),
   };
@@ -241,6 +242,7 @@ export function replayFromLesson(
   }
   next.cursor = { lessonId, phase: 'situation' };
   return {
+    ...progress,
     history: archiveIfCompleted(campaign, progress, at),
     current: next,
   };
