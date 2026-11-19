@@ -8,6 +8,8 @@ export const GOAL_IDS = [
   'lesson3_start',
   'campaign_complete',
   'campaign_replay',
+  'topic_start',
+  'topic_complete',
 ] as const;
 
 export type GoalId = (typeof GOAL_IDS)[number];

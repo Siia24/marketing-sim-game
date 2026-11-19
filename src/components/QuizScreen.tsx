@@ -1,7 +1,7 @@
 import { Redirect, useRouter } from 'expo-router';
 import { StyleSheet, Text, View } from 'react-native';
 import { getLesson, lessonIndex } from '../content/lookup';
-import { lessonPath, reportPath, resumePath } from '../state/routes';
+import { goHome, lessonPath, reportPath, resumePath } from '../state/routes';
 import { useCampaign } from '../state/ProgressContext';
 import { theme } from './theme';
 import { Button, Muted, Screen, Title } from './ui';
@@ -49,7 +49,7 @@ export function QuizScreen({ campaignId, lessonId }: { campaignId: string; lesso
 
   return (
     <Screen>
-      <Button label="К списку" variant="ghost" onPress={() => router.push('/')} />
+      <Button label="К списку" variant="ghost" onPress={() => goHome(router)} />
       <Muted>
         Урок {lessonIndex(campaign, lesson.id) + 1} · {lesson.quiz.title}
       </Muted>

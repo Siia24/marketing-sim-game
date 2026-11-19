@@ -51,7 +51,39 @@ export interface AttemptSummary {
   creative: string | null;
 }
 
+export interface TopicScore {
+  stars: number;
+  correctFirst: number;
+  graded: number;
+  updatedAt: string;
+}
+
+export interface TopicAnswer {
+  itemId: string;
+  choiceId: string;
+  correct: boolean;
+  firstTry: boolean;
+}
+
+export type TopicStage = 'cards' | 'practice' | 'feedback' | 'result';
+
+export interface TopicRun {
+  topicId: string;
+  stage: TopicStage;
+  cardIndex: number;
+  practiceIndex: number;
+  answers: TopicAnswer[];
+  stars: number;
+  correctFirst: number;
+  startedAt: string;
+  updatedAt: string;
+  startTracked: boolean;
+  completeTracked: boolean;
+}
+
 export interface StoredProgress {
   current: Attempt | null;
   history: AttemptSummary[];
+  topics: Record<string, TopicScore>;
+  topicRun: TopicRun | null;
 }

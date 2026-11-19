@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useRef, useState, type ReactNode 
 import { goalsToFire, type GoalId } from '../analytics/goals';
 import { track } from '../analytics/track';
 import { findCampaign, listCampaigns } from '../content/registry';
+import { findTopic } from '../content/topics';
 import type { Campaign } from '../content/types';
 import type { Attempt, StoredProgress } from '../engine/attempt';
 import { reduceFacts, resultFromFacts, type GameFacts } from '../engine/facts';
@@ -22,6 +23,7 @@ import {
   submitChoice,
   submitQuiz,
 } from '../engine/flow';
+import { advanceTopicRun, answerTopicRun, beginTopicRun } from '../engine/topicFlow';
 import { emptyProgress, loadProgress, saveProgress } from './storage';
 
 interface ProgressApi {
@@ -41,6 +43,14 @@ interface ProgressApi {
   revealCard: (campaign: Campaign, cardId: string) => Promise<void>;
   replayCampaign: (campaign: Campaign) => Promise<void>;
   replayLesson: (campaign: Campaign, lessonId: string) => Promise<void>;
+  beginTopic: (topicId: string) => Promise<void>;
+  answerTopic: (topicId: string, choiceId: string) => Promise<void>;
+  advanceTopic: (topicId: string) => Promise<void>;
+}
+
+interface FiredGoal {
+  id: GoalId;
+  params?: Record<string, string | number | boolean>;
 }
 
 const ProgressContext = createContext<ProgressApi | null>(null);
@@ -83,15 +93,23 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
     return reduceFacts(campaign, attempt.answers, attempt.requestedCardIds);
   }
 
-  async function commit(campaign: Campaign, progress: StoredProgress, extra: GoalId[] = []) {
-    const stamped = stampGoals(campaign, progress, extra);
+  async function persist(campaignId: string, progress: StoredProgress, goals: FiredGoal[]) {
     try {
-      await saveProgress(campaign.id, stamped.progress);
-      setSaved((prev) => ({ ...prev, [campaign.id]: stamped.progress }));
-      for (const goal of stamped.goals) track(goal);
+      await saveProgress(campaignId, progress);
+      setSaved((prev) => ({ ...prev, [campaignId]: progress }));
+      for (const goal of goals) track(goal.id, goal.params);
     } catch {
       setError('Не удалось сохранить шаг.');
     }
+  }
+
+  async function commit(campaign: Campaign, progress: StoredProgress, extra: GoalId[] = []) {
+    const stamped = stampGoals(campaign, progress, extra);
+    await persist(
+      campaign.id,
+      stamped.progress,
+      stamped.goals.map((id) => ({ id })),
+    );
   }
 
   async function run(task: () => Promise<void>) {
@@ -115,10 +133,11 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
     factsFor,
     start(campaign) {
       return run(async () => {
-        if (live(campaign.id).current) return;
+        const progress = live(campaign.id);
+        if (progress.current) return;
         const at = now();
         await commit(campaign, {
-          history: live(campaign.id).history,
+          ...progress,
           current: createAttempt(campaign, createAttemptId(), at),
         });
       });
@@ -187,6 +206,48 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
           replayFromLesson(campaign, live(campaign.id), lessonId, createAttemptId(), at),
           ['campaign_replay'],
         );
+      });
+    },
+    beginTopic(topicId) {
+      return run(async () => {
+        const found = findTopic(topicId);
+        if (!found) return;
+        const at = now();
+        let progress = beginTopicRun(live(found.campaign.id), found.topic, at);
+        if (!progress.topicRun) return;
+        progress = { ...progress, topicRun: { ...progress.topicRun, startTracked: true } };
+        await persist(found.campaign.id, progress, [
+          { id: 'topic_start', params: { topic: topicId } },
+        ]);
+      });
+    },
+    answerTopic(topicId, choiceId) {
+      return run(async () => {
+        const found = findTopic(topicId);
+        if (!found) return;
+        const before = live(found.campaign.id);
+        const progress = answerTopicRun(before, found.topic, choiceId, now());
+        if (progress === before) return;
+        await persist(found.campaign.id, progress, []);
+      });
+    },
+    advanceTopic(topicId) {
+      return run(async () => {
+        const found = findTopic(topicId);
+        if (!found) return;
+        const before = live(found.campaign.id);
+        let progress = advanceTopicRun(before, found.topic, now());
+        if (progress === before || !progress.topicRun) return;
+        const goals: FiredGoal[] = [];
+        if (progress.topicRun.stage === 'result' && !progress.topicRun.completeTracked) {
+          const stars = progress.topicRun.stars;
+          progress = {
+            ...progress,
+            topicRun: { ...progress.topicRun, completeTracked: true },
+          };
+          goals.push({ id: 'topic_complete', params: { topic: topicId, stars } });
+        }
+        await persist(found.campaign.id, progress, goals);
       });
     },
   };

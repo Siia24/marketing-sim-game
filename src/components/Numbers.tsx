@@ -1,6 +1,7 @@
 import { StyleSheet, Text, View } from 'react-native';
 import type { GameFacts } from '../engine/facts';
 import {
+  formatClicks,
   formatCount,
   formatMoney,
   formatMoneyPrecise,
@@ -34,7 +35,7 @@ export function PlayerNumbers({ result, facts }: { result: SimulationResult; fac
       )}
       {result.rows.map((row) => (
         <Text key={row.channel}>
-          {row.label}: {formatCount(row.impressions)} показов, {formatCount(row.clicks)} кликов
+          {row.label}: {formatCount(row.impressions)} показов, {formatClicks(row.clicks)}
           {result.coded !== null ? `, с кодом ${row.coded ?? 0}` : ''}
         </Text>
       ))}

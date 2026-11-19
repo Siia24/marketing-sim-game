@@ -2,7 +2,7 @@ import { Redirect, useRouter } from 'expo-router';
 import { StyleSheet, Text, View } from 'react-native';
 import type { Campaign } from '../content/types';
 import { formatSignedMoney } from '../engine/format';
-import { lessonPath, resumePath } from '../state/routes';
+import { goHome, lessonPath, resumePath } from '../state/routes';
 import { useCampaign } from '../state/ProgressContext';
 import { ModelNumbers, PlayerNumbers } from './Numbers';
 import { theme } from './theme';
@@ -37,7 +37,7 @@ export function ReportScreen({ campaignId }: { campaignId: string }) {
 
   return (
     <Screen>
-      <Button label="К списку" variant="ghost" onPress={() => router.push('/')} />
+      <Button label="К списку" variant="ghost" onPress={() => goHome(router)} />
       <Muted>Кампания «{campaign.title}»</Muted>
       <Title>Отчёт для владельца</Title>
       <Text style={styles.notice}>{campaign.numberNotice}</Text>

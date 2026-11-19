@@ -17,12 +17,23 @@ export function readCounterId(): number | null {
 }
 
 export function track(goal: GoalId, params?: Record<string, string | number | boolean>): void {
-  if (Platform.OS !== 'web') return;
+  const ready = prepareCounter();
+  if (!ready) return;
+  ready.browser.ym?.(ready.counterId, 'reachGoal', goal, params);
+}
+
+/** Просмотр страницы уходит при запуске, а не вместе с первой целью. */
+export function initMetrica(): void {
+  prepareCounter();
+}
+
+function prepareCounter(): { browser: BrowserWindow; counterId: number } | null {
+  if (Platform.OS !== 'web') return null;
   const counterId = readCounterId();
-  if (counterId === null || typeof document === 'undefined') return;
+  if (counterId === null || typeof document === 'undefined') return null;
   const browser = window as unknown as BrowserWindow;
   ensureCounter(browser, counterId);
-  browser.ym?.(counterId, 'reachGoal', goal, params);
+  return { browser, counterId };
 }
 
 function ensureCounter(browser: BrowserWindow, counterId: number): void {
