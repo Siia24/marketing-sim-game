@@ -1,22 +1,31 @@
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { ACHIEVEMENT_IDS } from '../engine/achievements';
+import { catArt } from '../content/art';
 import { topicsFor } from '../content/topics';
-import type { Topic } from '../content/topics';
 import type { Campaign } from '../content/types';
+import { CAMPAIGN_LINE, catById } from '../content/story';
 import type { Attempt } from '../engine/attempt';
 import { lessonProgress } from '../engine/flow';
 import { formatSignedMoney } from '../engine/format';
-import { starRow, totalStars } from '../engine/stars';
+import { totalStars } from '../engine/stars';
 import { lessonPath, reportPath, resumePath } from '../state/routes';
 import { useCampaignList } from '../state/ProgressContext';
+import { CatPortrait } from './CatPortrait';
+import { IntroScreen } from './IntroScreen';
 import { theme } from './theme';
+import { TopicMap } from './TopicMap';
 import { Button, Card, Muted, Screen, Title } from './ui';
 
 export function HomeScreen() {
   const router = useRouter();
   const api = useCampaignList();
   const [pending, setPending] = useState<{ campaign: Campaign; lessonId: string } | null>(null);
+  const [showStory, setShowStory] = useState(false);
+  const [leftIntro, setLeftIntro] = useState(false);
+  const campaign = api.campaigns[0];
+  const progress = campaign ? api.progressFor(campaign.id) : null;
 
   if (!api.ready) {
     return (
@@ -26,61 +35,87 @@ export function HomeScreen() {
     );
   }
 
+  const showIntro = showStory || Boolean(progress && !progress.seenIntro && !leftIntro);
+  if (showIntro) {
+    return (
+      <IntroScreen
+        continueLabel={progress?.seenIntro ? 'На карту' : 'В путь'}
+        onContinue={() => {
+          setShowStory(false);
+          setLeftIntro(true);
+          if (campaign && progress && !progress.seenIntro) void api.seeIntro(campaign.id);
+        }}
+      />
+    );
+  }
+
   return (
     <Screen>
       <Text style={styles.kicker}>Для студентов и начинающих маркетологов</Text>
       <Title>Маркетинг-игра</Title>
-      <Muted>
-        Темы можно открывать в любом порядке. Звёзды остаются за лучший результат. Кейс кофейни —
-        отдельная история, в которой решения складываются в один отчёт.
-      </Muted>
       {api.error ? <Text style={styles.error}>{api.error}</Text> : null}
-      {api.campaigns.map((campaign) => {
-        const progress = api.progressFor(campaign.id);
-        const attempt = progress.current;
-        const topics = topicsFor(campaign);
+      {api.campaigns.map((item) => {
+        const saved = api.progressFor(item.id);
+        const attempt = saved.current;
+        const topics = topicsFor(item);
         const tally = totalStars(
           topics.map((topic) => topic.id),
-          progress.topics,
+          saved.topics,
         );
-        const minutes = campaign.lessons.reduce((sum, lesson) => sum + lesson.estimatedMinutes, 0);
+        const active =
+          saved.topicRun && saved.topicRun.stage !== 'result' ? saved.topicRun.topicId : null;
+        const minutes = item.lessons.reduce((sum, lesson) => sum + lesson.estimatedMinutes, 0);
+        const guide = catById('mira');
         return (
-          <View key={campaign.id} style={styles.block}>
+          <View key={item.id} style={styles.block}>
             {topics.length > 0 ? (
               <View style={styles.block}>
-                <Text
-                  style={styles.total}
-                  testID="map-total-stars"
-                  accessibilityLabel={tallyLabel(tally)}
-                >
-                  Звёзды: {tally.got} из {tally.max}
-                </Text>
-                {topics.map((topic, index) => {
-                  const run = progress.topicRun;
-                  const active = run !== null && run.topicId === topic.id && run.stage !== 'result';
-                  return (
-                    <TopicNode
-                      key={topic.id}
-                      index={index}
-                      topic={topic}
-                      stars={progress.topics[topic.id]?.stars}
-                      active={active}
-                      onPress={() => router.push(`/topic/${topic.id}`)}
-                    />
-                  );
-                })}
+                <View style={styles.header}>
+                  <Text
+                    style={styles.total}
+                    testID="map-total-stars"
+                    accessibilityLabel={`${tally.got} из ${tally.max}`}
+                  >
+                    Звёзды: {tally.got} из {tally.max}
+                  </Text>
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={`Знаки, открыто ${saved.achievements.length} из ${ACHIEVEMENT_IDS.length}`}
+                    onPress={() => router.push('/achievements')}
+                    testID="open-achievements"
+                    style={({ pressed }) => [styles.signs, pressed && styles.pressed]}
+                  >
+                    <Text style={styles.signsText}>
+                      Знаки {saved.achievements.length}/{ACHIEVEMENT_IDS.length}
+                    </Text>
+                  </Pressable>
+                </View>
+                <TopicMap
+                  topics={topics}
+                  scores={saved.topics}
+                  activeTopicId={active}
+                  onOpen={(topicId) => router.push(`/topic/${topicId}`)}
+                />
+                <Button label="Кто с вами" variant="ghost" onPress={() => setShowStory(true)} />
               </View>
             ) : null}
             <Card>
+              <View style={styles.host}>
+                <CatPortrait source={catArt.mira} size={56} />
+                <View style={styles.hostText}>
+                  <Text style={styles.kicker}>{guide.name}</Text>
+                  <Text style={styles.hostLine}>{CAMPAIGN_LINE}</Text>
+                </View>
+              </View>
               <Text style={styles.kicker}>Кейс</Text>
-              <Text style={styles.cardTitle}>{campaign.title}</Text>
+              <Text style={styles.cardTitle}>{item.title}</Text>
               <Muted>
-                {campaign.lessons.length} связанных уроков, около {minutes} минут. Цифры отчёта
-                считаются только здесь. {campaign.numberNotice}
+                {item.lessons.length} связанных уроков, около {minutes} минут. Цифры отчёта
+                считаются только здесь. {item.numberNotice}
               </Muted>
               <View style={styles.lessons}>
-                {campaign.lessons.map((lesson, index) => {
-                  const status = lessonProgress(campaign, attempt, lesson.id);
+                {item.lessons.map((lesson, index) => {
+                  const status = lessonProgress(item, attempt, lesson.id);
                   return (
                     <View key={lesson.id} style={styles.lessonRow}>
                       <Text style={styles.lessonTitle}>
@@ -94,40 +129,38 @@ export function HomeScreen() {
                 })}
               </View>
               <Actions
-                campaign={campaign}
+                campaign={item}
                 attempt={attempt}
                 onStart={() => {
-                  const first = campaign.lessons[0];
+                  const first = item.lessons[0];
                   if (!first) return;
-                  void api
-                    .start(campaign)
-                    .then(() => router.push(lessonPath(campaign.id, first.id)));
+                  void api.start(item).then(() => router.push(lessonPath(item.id, first.id)));
                 }}
                 onContinue={() => {
                   if (!attempt) return;
-                  router.push(resumePath(campaign.id, attempt));
+                  router.push(resumePath(item.id, attempt));
                 }}
-                onReport={() => router.push(reportPath(campaign.id))}
+                onReport={() => router.push(reportPath(item.id))}
                 onReplay={() => {
-                  const first = campaign.lessons[0];
+                  const first = item.lessons[0];
                   if (!first) return;
-                  void api.replayCampaign(campaign).then(() => {
-                    router.push(lessonPath(campaign.id, first.id));
+                  void api.replayCampaign(item).then(() => {
+                    router.push(lessonPath(item.id, first.id));
                   });
                 }}
-                onAskReplay={(lessonId) => setPending({ campaign, lessonId })}
+                onAskReplay={(lessonId) => setPending({ campaign: item, lessonId })}
               />
-              {progress.history.length > 0 ? (
+              {saved.history.length > 0 ? (
                 <View style={styles.history}>
                   <Text style={styles.historyTitle}>Прошлые попытки</Text>
-                  {progress.history.map((item) => (
-                    <Text key={item.attemptId} style={styles.historyItem}>
-                      {item.observedChecks === null
+                  {saved.history.map((entry) => (
+                    <Text key={entry.attemptId} style={styles.historyItem}>
+                      {entry.observedChecks === null
                         ? 'Без полного плана'
-                        : `${item.observedChecks} чеков, вклад ${
-                            item.netContribution === null
+                        : `${entry.observedChecks} чеков, вклад ${
+                            entry.netContribution === null
                               ? '—'
-                              : formatSignedMoney(item.netContribution)
+                              : formatSignedMoney(entry.netContribution)
                           }`}
                     </Text>
                   ))}
@@ -149,10 +182,10 @@ export function HomeScreen() {
             testID="replay-confirm"
             onPress={() => {
               const lessonId = pending.lessonId;
-              const campaign = pending.campaign;
+              const chosen = pending.campaign;
               setPending(null);
-              void api.replayLesson(campaign, lessonId).then(() => {
-                router.push(lessonPath(campaign.id, lessonId));
+              void api.replayLesson(chosen, lessonId).then(() => {
+                router.push(lessonPath(chosen.id, lessonId));
               });
             }}
           />
@@ -161,51 +194,6 @@ export function HomeScreen() {
       ) : null}
     </Screen>
   );
-}
-
-function TopicNode({
-  index,
-  topic,
-  stars,
-  active,
-  onPress,
-}: {
-  index: number;
-  topic: Topic;
-  stars: number | undefined;
-  active: boolean;
-  onPress: () => void;
-}) {
-  const value = stars ?? 0;
-  return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={`${topic.title}, ${value} из 3`}
-      onPress={onPress}
-      testID={`map-topic-${topic.id}`}
-      style={({ pressed }) => [styles.node, pressed && styles.pressed]}
-    >
-      <View style={styles.badge}>
-        <Text style={styles.badgeText}>{index + 1}</Text>
-      </View>
-      <View style={styles.nodeBody}>
-        <Text style={styles.lessonTitle}>{topic.title}</Text>
-        <Text style={styles.lessonMeta}>{topic.summary}</Text>
-        <Text style={styles.starText}>{starRow(value)}</Text>
-        <Text style={styles.lessonMeta}>{nodeStatus(stars, active)}</Text>
-      </View>
-    </Pressable>
-  );
-}
-
-function nodeStatus(stars: number | undefined, active: boolean): string {
-  if (active) return 'сейчас';
-  if (stars === undefined) return 'не начата';
-  return 'лучший результат';
-}
-
-function tallyLabel(tally: { got: number; max: number }): string {
-  return `${tally.got} из ${tally.max}`;
 }
 
 function Actions({
@@ -263,31 +251,23 @@ function statusLabel(status: 'done' | 'current' | 'locked', started: boolean): s
 }
 
 const styles = StyleSheet.create({
-  kicker: { fontSize: 13, fontWeight: '700', color: theme.accent, letterSpacing: 0.3 },
+  kicker: { fontSize: 13, fontWeight: '700', color: theme.gold, letterSpacing: 0.3 },
   block: { gap: 12 },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
   total: { fontSize: 16, fontWeight: '700', color: theme.ink },
-  node: {
-    flexDirection: 'row',
-    gap: 12,
-    alignItems: 'flex-start',
-    backgroundColor: theme.card,
-    borderRadius: 14,
+  signs: {
+    borderRadius: 999,
     borderWidth: 1,
-    borderColor: theme.line,
-    padding: 14,
+    borderColor: theme.gold,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    backgroundColor: theme.card,
   },
+  signsText: { color: theme.gold, fontWeight: '700', fontSize: 14 },
   pressed: { opacity: 0.86 },
-  badge: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: theme.accentSoft,
-  },
-  badgeText: { fontSize: 16, fontWeight: '700', color: theme.accent },
-  nodeBody: { flex: 1, gap: 4 },
-  starText: { fontSize: 16, letterSpacing: 2, color: theme.accent },
+  host: { flexDirection: 'row', gap: 12, alignItems: 'center' },
+  hostText: { flex: 1, gap: 4 },
+  hostLine: { fontSize: 15, lineHeight: 21, color: theme.ink },
   cardTitle: { fontSize: 20, lineHeight: 26, fontWeight: '700', color: theme.ink },
   lessons: { gap: 8 },
   lessonRow: { gap: 2 },

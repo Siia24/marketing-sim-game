@@ -1,11 +1,14 @@
 import { useRouter } from 'expo-router';
 import { StyleSheet, Text, View } from 'react-native';
+import { catArt } from '../content/art';
 import { findTopic } from '../content/topics';
 import type { Topic, TopicChoice } from '../content/topics';
+import { hostFor } from '../content/story';
 import type { TopicRun } from '../engine/attempt';
-import { starRow } from '../engine/stars';
 import { goHome } from '../state/routes';
 import { useCampaign } from '../state/ProgressContext';
+import { CatPortrait } from './CatPortrait';
+import { StarMark } from './StarMark';
 import { theme } from './theme';
 import { Button, Card, Muted, Screen, Title } from './ui';
 
@@ -39,6 +42,7 @@ export function TopicScreen({ topicId }: { topicId: string }) {
     <Screen>
       <Button label="На карту" variant="ghost" onPress={() => goHome(router)} testID="topic-home" />
       {api.error ? <Text style={styles.error}>{api.error}</Text> : null}
+      {run && run.stage !== 'result' ? <HostChip topicId={topic.id} /> : null}
       <Muted>
         {topic.minutes} мин · {topic.sourcesLabel}
       </Muted>
@@ -88,14 +92,20 @@ function Intro({
 }) {
   return (
     <View style={styles.block}>
+      <HostLine topicId={topic.id} moment="hello" />
       <Text style={styles.body}>{topic.summary}</Text>
       {topic.summaryNeedsCheck ? (
         <Muted>Короткая формулировка взята из пакета кампании. Её стоит сверить с учебником.</Muted>
       ) : null}
       <Muted>{notice}</Muted>
-      <Text accessibilityLabel={starsLabel(stars ?? 0)} style={styles.stars}>
-        {stars === undefined ? 'Пока без звёзд' : `Лучший результат ${starRow(stars)}`}
-      </Text>
+      {stars === undefined ? (
+        <Text style={styles.stars}>Пока без звёзд</Text>
+      ) : (
+        <View style={styles.best}>
+          <Text style={styles.stars}>Лучший результат</Text>
+          <StarMark value={stars} />
+        </View>
+      )}
       <Muted>Звёзды считаются по ответам до подсказки. Тему можно пройти заново.</Muted>
       <Button
         label={stars === undefined ? 'Начать' : 'Пройти заново'}
@@ -225,17 +235,17 @@ function Result({
   return (
     <View style={styles.block} testID="topic-result">
       <Text style={styles.section}>Тема пройдена</Text>
-      <Text
-        accessibilityLabel={starsLabel(run.stars)}
-        style={styles.resultStars}
-        testID="topic-stars"
-      >
-        {starRow(run.stars)}
-      </Text>
+      <HostLine topicId={topic.id} moment="bye" />
+      <View testID="topic-stars">
+        <StarMark value={run.stars} size={32} celebrate />
+      </View>
       <Text style={styles.body}>
         Верно до подсказки: {run.correctFirst} из {topic.questions.length}.
       </Text>
-      <Text style={styles.body}>Лучший результат: {starRow(best)}</Text>
+      <View style={styles.best}>
+        <Text style={styles.body}>Лучший результат</Text>
+        <StarMark value={best} />
+      </View>
       {run.stars < best ? <Muted>Этот заход не улучшил результат.</Muted> : null}
       <Button label="На карту" onPress={onHome} testID="topic-done" />
       <Button label="Пройти заново" variant="secondary" onPress={onRetry} testID="topic-retry" />
@@ -243,8 +253,29 @@ function Result({
   );
 }
 
-function starsLabel(value: number): string {
-  return `${value} из 3`;
+function HostChip({ topicId }: { topicId: string }) {
+  const host = hostFor(topicId);
+  if (!host) return null;
+  return (
+    <View style={styles.host}>
+      <CatPortrait source={catArt[host.catId]} size={48} />
+      <Text style={styles.hostName}>{host.cat.name}</Text>
+    </View>
+  );
+}
+
+function HostLine({ topicId, moment }: { topicId: string; moment: 'hello' | 'bye' }) {
+  const host = hostFor(topicId);
+  if (!host) return null;
+  return (
+    <View style={styles.host}>
+      <CatPortrait source={catArt[host.catId]} size={64} />
+      <View style={styles.hostText}>
+        <Text style={styles.hostName}>{host.cat.name}</Text>
+        <Text style={styles.body}>{moment === 'hello' ? host.hello : host.bye}</Text>
+      </View>
+    </View>
+  );
 }
 
 const styles = StyleSheet.create({
@@ -253,11 +284,14 @@ const styles = StyleSheet.create({
   body: { fontSize: 16, lineHeight: 24, color: theme.ink },
   line: { gap: 4 },
   speaker: { fontSize: 13, fontWeight: '700', color: theme.muted },
-  stars: { fontSize: 18, color: theme.accent, letterSpacing: 2 },
-  resultStars: { fontSize: 32, color: theme.accent, letterSpacing: 4 },
+  stars: { fontSize: 16, color: theme.muted },
+  best: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  host: { flexDirection: 'row', gap: 12, alignItems: 'center' },
+  hostText: { flex: 1, gap: 4 },
+  hostName: { fontSize: 16, fontWeight: '700', color: theme.gold, fontFamily: theme.fontTitle },
   feedback: { borderRadius: 14, padding: 16, gap: 10, borderWidth: 1 },
-  ok: { backgroundColor: theme.okBg, borderColor: '#bbf7d0' },
-  miss: { backgroundColor: theme.warnBg, borderColor: '#fed7aa' },
+  ok: { backgroundColor: theme.okBg, borderColor: theme.okLine },
+  miss: { backgroundColor: theme.warnBg, borderColor: theme.warnLine },
   kicker: { fontSize: 13, fontWeight: '700', color: theme.muted },
   error: { color: theme.badInk },
 });

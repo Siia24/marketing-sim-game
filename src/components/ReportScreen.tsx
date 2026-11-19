@@ -1,5 +1,7 @@
 import { Redirect, useRouter } from 'expo-router';
-import { StyleSheet, Text, View } from 'react-native';
+import { Image, StyleSheet, Text, View } from 'react-native';
+import { fellowshipArt } from '../content/art';
+import { FINALE_LINE, catById } from '../content/story';
 import type { Campaign } from '../content/types';
 import { formatSignedMoney } from '../engine/format';
 import { goHome, lessonPath, resumePath } from '../state/routes';
@@ -40,6 +42,17 @@ export function ReportScreen({ campaignId }: { campaignId: string }) {
       <Button label="К списку" variant="ghost" onPress={() => goHome(router)} />
       <Muted>Кампания «{campaign.title}»</Muted>
       <Title>Отчёт для владельца</Title>
+      <View style={styles.frame}>
+        <Image
+          source={fellowshipArt}
+          style={styles.photo}
+          resizeMode="cover"
+          accessibilityLabel="Четыре котика в мантиях на лугу"
+        />
+      </View>
+      <Text style={styles.body}>
+        {catById('mira').name}: {FINALE_LINE}
+      </Text>
       <Text style={styles.notice}>{campaign.numberNotice}</Text>
       <Card>
         <PlayerNumbers result={result} facts={facts} />
@@ -92,6 +105,14 @@ function findDebrief(campaign: Campaign): { prompt: string; text: string } | nul
 
 const styles = StyleSheet.create({
   notice: { fontSize: 13, lineHeight: 18, color: theme.muted },
+  frame: {
+    width: '100%',
+    aspectRatio: 16 / 9,
+    borderRadius: theme.radius,
+    overflow: 'hidden',
+    backgroundColor: theme.blue,
+  },
+  photo: { width: '100%', height: '100%' },
   block: { gap: 8 },
   section: { fontSize: 18, fontWeight: '700', color: theme.ink },
   body: { fontSize: 16, lineHeight: 24, color: theme.ink },

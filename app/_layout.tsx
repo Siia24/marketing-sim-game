@@ -5,6 +5,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { initMetrica } from '@/analytics/track';
 import { theme } from '@/components/theme';
+import { UnlockPopup } from '@/components/UnlockPopup';
 import { ProgressProvider } from '@/state/ProgressContext';
 
 export default function RootLayout() {
@@ -16,13 +17,14 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1, backgroundColor: theme.bg }}>
       <SafeAreaProvider>
         <ProgressProvider>
-          <StatusBar style="dark" />
+          <StatusBar style="light" />
           <Stack
             screenOptions={{
               headerShown: false,
               contentStyle: { backgroundColor: theme.bg },
             }}
           />
+          <UnlockPopup />
         </ProgressProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
