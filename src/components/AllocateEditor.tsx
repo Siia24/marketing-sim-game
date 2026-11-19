@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import type { AllocateStep, Campaign } from '../content/types';
 import type { GameFacts } from '../engine/facts';
-import { formatCount, formatMoney } from '../engine/format';
+import { formatClicks, formatCount, formatMoney } from '../engine/format';
 import { simulateCoffeeV1, type SimulationResult } from '../engine/simulate';
 import { theme } from './theme';
 import { Button } from './ui';
@@ -89,7 +89,7 @@ export function AllocateEditor({
           {forecast.rows.map((row) => (
             <Text key={row.channel} style={styles.forecastRow}>
               {row.label}: {formatCount(row.impressions)} показов → {formatCount(row.relevant)}{' '}
-              релевантных → {formatCount(row.clicks)} кликов → {row.paid} оплат
+              релевантных → {formatClicks(row.clicks)} → {row.paid} оплат
             </Text>
           ))}
         </View>
